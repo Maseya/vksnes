@@ -18,18 +18,21 @@
     <ClCompile Include="test.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MainWindow.cxx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WinApiInstance.cxx">
+    <ClCompile Include="print_debug_message.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WinApiWindow.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="WinApiInstance.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MainWindow.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MainWindow.hxx">
+    <ClInclude Include="print_debug_message.hxx">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WinApiInstance.hxx">
@@ -38,5 +41,11 @@
     <ClInclude Include="WinApiWindow.hxx">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MainWindow.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

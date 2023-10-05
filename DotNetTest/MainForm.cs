@@ -1,183 +1,209 @@
-﻿namespace DotNetTest
+namespace DotNetTest;
+
+using System;
+using System.Drawing;
+using System.IO;
+using System.Windows.Forms;
+
+using SnesRenderNet;
+
+public partial class MainForm : Form
 {
-    using System;
-    using System.Windows.Forms;
-
-    struct Vertex
+    public MainForm(Instance instance)
     {
-        public float x, y, r, g, b;
+        InitializeComponent();
 
-        public Vertex(float x, float y, float r, float g, float b)
+        Timer = new System.Timers.Timer(5);
+        Timer.Elapsed += Timer_Elapsed;
+
+        Instance = instance;
+
+        Disposed += MainForm_Disposed;
+    }
+
+    private System.Timers.Timer Timer { get; }
+
+    private Instance Instance
+    {
+        get;
+    }
+
+    private Surface Surface
+    {
+        get; set;
+    }
+
+    private CheckerboardPipeline CheckerboardPipeline
+    {
+        get; set;
+    }
+
+    private CheckerboardSurfaceFramebuffers CheckerboardSurfaceFramebuffers
+    {
+        get; set;
+    }
+
+    private SizeF CheckerboardSize
+    {
+        get; set;
+    }
+
+    private Color CheckerboardColor1
+    {
+        get;
+        set;
+    }
+
+    private Color CheckerboardColor2
+    {
+        get;
+        set;
+    }
+
+    private PalettePipeline PalettePipeline
+    {
+        get;
+        set;
+    }
+
+    private PaletteSurfaceFramebuffers PaletteSurfaceFramebuffers
+    {
+        get; set;
+    }
+
+    private byte[] PaletteData
+    {
+        get;
+        set;
+    }
+
+    private Size ViewSize
+    {
+        get;
+        set;
+    }
+
+    private DateTime StartTime
+    {
+        get; set;
+    }
+
+    private TimeSpan ElapsedTime
+    {
+        get
         {
-            this.x = x;
-            this.y = y;
-            this.r = r;
-            this.g = g;
-            this.b = b;
+            return DateTime.Now - StartTime;
         }
     }
 
-    public partial class MainForm : Form
+    private void MainForm_Load(object sender, EventArgs e)
     {
-        public MainForm(Instance instance)
+        Surface = new Surface(Instance, drawSurface);
+
+        CheckerboardPipeline = new CheckerboardPipeline(Instance);
+        CheckerboardSurfaceFramebuffers = new CheckerboardSurfaceFramebuffers(
+            CheckerboardPipeline,
+            Surface,
+            2);
+
+        PalettePipeline = new PalettePipeline(Instance);
+        PaletteSurfaceFramebuffers = new PaletteSurfaceFramebuffers(
+            PalettePipeline,
+            Surface,
+            1000001002);
+
+        CheckerboardSize = new SizeF(4, 4);
+        CheckerboardColor1 = Color.FromArgb(0, 200, 200, 200);
+        CheckerboardColor2 = Color.FromArgb(0, 240, 240, 240);
+        ViewSize = new Size(16, 16);
+
+        PaletteData = File.ReadAllBytes(Environment.GetCommandLineArgs()[1]);
+
+        StartTime = DateTime.Now;
+        Timer.Start();
+    }
+
+    private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+    {
+        drawSurface.Invalidate();
+    }
+
+    private void UpdateFrame()
+    {
+        var frame = 60 * ElapsedTime.TotalMilliseconds / 1000;
+        var angle = frame * Math.PI / 180;
+        var transparency = (int)(255 * (0.5 * (Math.Cos(angle) + 1) / 2));
+        CheckerboardColor1 = Color.FromArgb(transparency, CheckerboardColor1);
+        CheckerboardColor2 = Color.FromArgb(transparency, CheckerboardColor2);
+    }
+
+    private void Draw(Surface surface)
+    {
+        UpdateFrame();
+
+        if (!surface.IsSwapchainValid())
         {
-            InitializeComponent();
-
-            Timer = new System.Timers.Timer(5);
-            Timer.Elapsed += Timer_Elapsed;
-
-            Instance = instance;
-
-            Disposed += MainForm_Disposed;
-        }
-
-        System.Timers.Timer Timer { get; }
-
-        private Instance Instance
-        {
-            get;
-        }
-
-        private Surface Surface1
-        {
-            get; set;
-        }
-
-        private Surface Surface2
-        {
-            get; set;
-        }
-
-        private TestVertexBuffers VertexBuffers1
-        {
-            get; set;
-        }
-
-        private TestVertexBuffers VertexBuffers2
-        {
-            get; set;
-        }
-
-        private TestUniformBuffers UniformBuffers1
-        {
-            get; set;
-        }
-
-        private TestUniformBuffers UniformBuffers2
-        {
-            get; set;
-        }
-
-        private float Angle1
-        {
-            get;
-            set;
-        }
-
-        private float Angle2
-        {
-            get;
-            set;
-        }
-
-        private DateTime StartTime
-        {
-            get; set;
-        }
-
-        private TimeSpan ElapsedTime
-        {
-            get
+            if (surface.TryRecreateSwapchain())
             {
-                return DateTime.Now - StartTime;
+                CheckerboardSurfaceFramebuffers.Dispose();
+                CheckerboardSurfaceFramebuffers =
+                    new CheckerboardSurfaceFramebuffers(
+                        CheckerboardPipeline,
+                        Surface,
+                        2);
+
+                PaletteSurfaceFramebuffers.Dispose();
+                PaletteSurfaceFramebuffers =
+                    new PaletteSurfaceFramebuffers(
+                        PalettePipeline,
+                        Surface);
+            }
+            else
+            {
+                return;
             }
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        if (!surface.TryGetSurfaceImage(out var image))
         {
-            Surface1 = Instance.CreateWin32Surface(drawSurface1);
-            Surface2 = Instance.CreateWin32Surface(drawSurface2);
-
-            VertexBuffers1 = Surface1.CreateTestVertexBuffers();
-            VertexBuffers2 = Surface2.CreateTestVertexBuffers();
-
-            UniformBuffers1 = Surface1.CreateTestUniformBuffers();
-            UniformBuffers2 = Surface2.CreateTestUniformBuffers();
-
-            var vertices1 = new Vertex[] {
-                new Vertex(+0.0f, -0.5f, 1.0f, 1.0f, 0.0f),
-                new Vertex(+0.5f, 0.5f, 0.0f, 1.0f, 1.0f),
-                new Vertex(-0.5f, 0.5f, 1.0f, 0.0f, 1.0f) };
-
-            var vertices2 = new Vertex[]{
-                new Vertex(-0.5f, -0.5f, 0.0f, 0.0f, 0.0f),
-                new Vertex(+0.5f, -0.5f, 1.0f, 0.0f, 0.0f),
-                new Vertex(+0.5f, +0.5f, 1.0f, 1.0f, 1.0f),
-                new Vertex(-0.5f, -0.5f, 0.0f, 0.0f, 0.0f),
-                new Vertex(+0.5f, +0.5f, 1.0f, 1.0f, 1.0f),
-                new Vertex(-0.5f, +0.5f, 0.0f, 1.0f, 1.0f)
-            };
-
-            VertexBuffers1.UpdateBuffer(vertices1);
-            VertexBuffers2.UpdateBuffer(vertices2);
-
-            StartTime = DateTime.Now;
-            Timer.Start();
+            Draw(surface);
+            return;
         }
 
-        private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        var checkerboardFramebuffer = CheckerboardSurfaceFramebuffers.
+            GetFramebuffer(image);
+        var paletteFramebuffer = PaletteSurfaceFramebuffers.
+            GetFramebuffer(image);
+
+        paletteFramebuffer.SetDependency(checkerboardFramebuffer);
+
+        checkerboardFramebuffer.UpdatePattern(
+            CheckerboardSize,
+            CheckerboardColor1,
+            CheckerboardColor2);
+        paletteFramebuffer.UpdateView(ViewSize);
+        paletteFramebuffer.UpdateColorData(PaletteData);
+
+        checkerboardFramebuffer.Render(1);
+        paletteFramebuffer.Render(1);
+
+        if (!surface.Present(image))
         {
-            drawSurface1.Invalidate();
-            drawSurface2.Invalidate();
-            Angle1 = (float)(ElapsedTime.TotalMilliseconds / 800.0);
-            Angle2 = -(float)(ElapsedTime.TotalMilliseconds / 400.0);
+            Draw(surface);
         }
+    }
 
-        private void Draw(
-            Surface surface,
-            TestVertexBuffers vertexBuffers,
-            TestUniformBuffers uniformBuffers,
-            float angle)
-        {
-            _loop:
-            using (var target = surface.AcquireRenderTarget())
-            {
-                if (!target)
-                {
-                    return;
-                }
+    private void DrawSurface1_Paint(object sender, PaintEventArgs e)
+    {
+        Draw(Surface);
+    }
 
-                Instance.RenderTestImageWithBuffers(
-                    target,
-                    vertexBuffers,
-                    uniformBuffers,
-                    angle);
-
-                if (!surface.Present(target))
-                {
-                    goto _loop;
-                }
-            }
-        }
-
-        private void DrawSurface1_Paint(object sender, PaintEventArgs e)
-        {
-            Draw(Surface1, VertexBuffers1, UniformBuffers1, Angle1);
-        }
-
-        private void DrawSurface2_Paint(object sender, PaintEventArgs e)
-        {
-            Draw(Surface2, VertexBuffers2, UniformBuffers2, Angle2);
-        }
-
-        private void MainForm_Disposed(object sender, EventArgs e)
-        {
-            UniformBuffers2.Dispose();
-            UniformBuffers1.Dispose();
-            VertexBuffers2.Dispose();
-            VertexBuffers1.Dispose();
-            Surface2.Dispose();
-            Surface1.Dispose();
-        }
+    private void MainForm_Disposed(object sender, EventArgs e)
+    {
+        PaletteSurfaceFramebuffers.Dispose();
+        PalettePipeline.Dispose();
+        CheckerboardSurfaceFramebuffers.Dispose();
+        CheckerboardPipeline.Dispose();
+        Surface.Dispose();
     }
 }

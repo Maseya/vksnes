@@ -1,0 +1,25 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define VK_KHR_SWAPCHAIN_EXTENSION_NAME
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define _DEBUG
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define VKAPI_ATTR
+#define VKAPI_ATTR __attribute__((pcs("aapcs-vfp")))
+#define VK_SUBPASS_EXTERNAL (~0U)
+#define NULL
+#define NULL ((void *)0)
+#define VULKAN_HPP_NOEXCEPT
+#define offsetof(s, m) ((::size_t)&static_cast<char const volatile&>((((s*)0)->m)))
+#define offsetof(s, m) ((size_t)&(((s*)0)->m))
+#define offsetof(s, m) __builtin_offsetof(s,m)
+#define FORMAT_MESSAGE_ALLOCATE_BUFFER
+#define VK_NULL_HANDLE
+#define VK_NULL_HANDLE ((void*)0)
+#define VK_FALSE
+#define GET_INSTANCE_PROC_ADDR(instance__, name__) get_instance_proc_addr<PFN_##name__>(instance__, #name__)

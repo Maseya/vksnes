@@ -1,48 +1,49 @@
 #include "WinApiInstance.hxx"
 
-// Local headers
-#include "WinApiWindow.hxx"
-
 // External APIs
-#include <SnesRenderApi/VulkanError.hxx>
+#include <vkbase/VulkanError.hxx>
 
-// Standard library
-#include <utility>
+namespace maseya::vksnes {
+constexpr wchar_t dummy_window_class_name[256 + 1] = L"SnesRenderLib.DummyWindow";
 
-namespace maseya::renderer {
-constexpr wchar_t dummy_window_class_name[256 + 1] = L"SnesRenderApi.DummyWindow";
+static ATOM register_dummy_window_class(HINSTANCE hinstance);
 
-ATOM register_dummy_window_class(HINSTANCE hinstance);
+WinApiInstance::WindowClassRemover::WindowClassRemover(HINSTANCE hinstance) noexcept
+        : hinstance_(hinstance) {}
+
+void WinApiInstance::WindowClassRemover::operator()(ATOM atom) const noexcept {
+    UnregisterClassW(reinterpret_cast<LPCWSTR>(atom), hinstance_);
+}
 
 WinApiInstance::WinApiInstance(HINSTANCE hinstance)
         : hinstance_(hinstance),
-          dummy_window_class_(register_dummy_window_class(hinstance)) {}
+          dummy_window_class_(register_dummy_window_class(hinstance), hinstance) {}
 
-WinApiInstance::WinApiInstance(WinApiInstance&& rhs) noexcept
-        : hinstance_(std::exchange(rhs.hinstance_, nullptr)),
-          dummy_window_class_(rhs.dummy_window_class_) {}
+HWND WinApiInstance::create_dummy_hwnd(int client_width, int client_height) const {
+    int width, height;
+    get_window_size_from_client(client_width, client_height, width, height);
 
-WinApiInstance::~WinApiInstance() {
-    if (hinstance_) {
-        UnregisterClassW(reinterpret_cast<LPCWSTR>(dummy_window_class_), hinstance_);
-    }
-}
-
-WinApiInstance& WinApiInstance::operator=(WinApiInstance&& rhs) noexcept {
-    std::swap(hinstance_, rhs.hinstance_);
-    std::swap(dummy_window_class_, rhs.dummy_window_class_);
-    return *this;
-}
-
-WinApiWindow WinApiInstance::create_dummy_window() const {
-    HWND hwnd = CreateWindowExW(0, reinterpret_cast<LPCWSTR>(dummy_window_class_),
+    HWND hwnd = CreateWindowExW(0, reinterpret_cast<LPCWSTR>(*dummy_window_class_),
                                 L"Dummy window", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                                CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL,
-                                hinstance_, NULL);
+                                CW_USEDEFAULT, width, height, nullptr, nullptr,
+                                hinstance_, nullptr);
     if (hwnd == 0) {
-        throw VulkanWinApiError();
+        throw vkbase::VulkanWinApiError();
     }
-    return WinApiWindow(hwnd);
+    return hwnd;
+}
+
+void WinApiInstance::get_window_size_from_client(int client_width, int client_height,
+                                                 int& window_width,
+                                                 int& window_height) {
+    int cxSizeFrame = GetSystemMetrics(SM_CXSIZEFRAME);
+    int cxPadding = GetSystemMetrics(SM_CXPADDEDBORDER);
+
+    int cySizeFrame = GetSystemMetrics(SM_CYSIZEFRAME);
+    int cyCaption = GetSystemMetrics(SM_CYCAPTION);
+
+    window_width = client_width + 2 * (cxSizeFrame + cxPadding);
+    window_height = client_height + cyCaption + 2 * (cySizeFrame + cxPadding);
 }
 
 ATOM register_dummy_window_class(HINSTANCE hinstance) {
@@ -50,14 +51,14 @@ ATOM register_dummy_window_class(HINSTANCE hinstance) {
     wc.cbSize = sizeof(wc);
     wc.lpfnWndProc = DefWindowProcW;
     wc.hInstance = hinstance;
+    wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
     wc.lpszClassName = dummy_window_class_name;
 
     ATOM result = RegisterClassExW(&wc);
     if (result == 0) {
-        throw VulkanWinApiError();
+        throw vkbase::VulkanWinApiError();
     }
-
     return result;
 }
-}  // namespace maseya::renderer
+}  // namespace maseya::vksnes

@@ -3,13 +3,10 @@
 // External APIs
 #include <Windows.h>
 
-// Standard library
-#include <utility>
-
-namespace maseya::renderer {
+namespace maseya::vksnes {
 class WinApiWindow {
 public:
-    WinApiWindow(HWND hwnd);
+    WinApiWindow(HWND&& hwnd);
     WinApiWindow(const WinApiWindow&) = delete;
     WinApiWindow(WinApiWindow&& rhs) noexcept;
 
@@ -29,20 +26,18 @@ public:
 
     virtual bool run_iteration();
 
+protected:
     virtual void on_size(WPARAM size_mode, SHORT width, SHORT height);
     virtual void on_sizing(WPARAM size_mode, RECT& rect);
     virtual void on_move(const POINTS& location);
     virtual void on_moving(RECT& rect);
 
 private:
-    static WinApiWindow& get_window(HWND hwnd);
-
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                        LPARAM lParam);
 
 private:
     HWND hwnd_;
-    MSG msg_;
     WNDPROC def_wnd_proc_;
 };
-}  // namespace maseya::renderer
+}  // namespace maseya::vksnes

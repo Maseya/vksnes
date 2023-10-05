@@ -1,60 +1,134 @@
 #pragma once
 
-// Local headers
-#include "Instance.hxx"
-#include "RenderTarget.hxx"
-#include "Surface.hxx"
-#include "TestUniformBuffers.hxx"
-#include "Version.hxx"
-#include "VertexBufferHelper.hxx"
+// External APIs
+#include <Windows.h>
+#include <vulkan/vulkan.h>
 
-#define DLLEXPORT __declspec(dllexport)
+// Standard library
+#include <cstdint>
+
+typedef void* CheckerboardFramebufferHandle;
+typedef void* CheckerboardPipelineHandle;
+typedef void* CheckerboardSurfaceFramebuffersHandle;
+typedef void* FramebufferBaseHandle;
+typedef void* ImageHandle;
+typedef void* ImageBaseHandle;
+typedef void* InstanceHandle;
+typedef void* PaletteFramebufferHandle;
+typedef void* PalettePipelineHandle;
+typedef void* PaletteSurfaceFramebuffersHandle;
+typedef void* SurfaceHandle;
+typedef void* SurfaceFramebuffersHandle;
+typedef void* SwapchainImageHandle;
 
 extern "C" {
-typedef maseya::renderer::Instance* InstanceHandle;
-typedef maseya::renderer::Surface* SurfaceHandle;
-typedef maseya::renderer::RenderTarget* RenderTargetHandle;
-typedef maseya::renderer::TestUniformBuffers* TestUniformBuffersHandle;
-typedef maseya::renderer::VertexBufferHelper* TestVertexBufferHandle;
+InstanceHandle __declspec(dllexport) create_instance(
+        const char* application_name, uint32_t application_version,
+        const VkDebugUtilsMessengerCreateInfoEXT* debug_utils_messenger_create_info);
 
-InstanceHandle DLLEXPORT create_instance(
-        const char* application_name,
-        const maseya::renderer::Version* application_version,
-        const vk::DebugUtilsMessengerCreateInfoEXT* debug_utils_messenger_create_info);
+void __declspec(dllexport) destroy_instance(InstanceHandle instance);
 
-void DLLEXPORT destroy_instance(InstanceHandle handle);
+void __declspec(dllexport) instance_wait_idle(const InstanceHandle instance);
 
-SurfaceHandle DLLEXPORT create_win32_surface(const InstanceHandle instance, HWND hwnd);
+SurfaceHandle __declspec(dllexport)
+        create_win32_surface(const InstanceHandle instance, HWND hwnd);
 
-void DLLEXPORT destroy_surface(SurfaceHandle surface);
+void __declspec(dllexport) destroy_surface(SurfaceHandle surface);
 
-RenderTargetHandle DLLEXPORT acquire_render_target_from_surface(SurfaceHandle surface,
-                                                                uint32_t timeout);
+bool __declspec(dllexport) is_swapchain_valid(const SurfaceHandle surface);
 
-void DLLEXPORT destroy_render_target(RenderTargetHandle render_target);
+SwapchainImageHandle __declspec(dllexport)
+        acquire_surface_image(SurfaceHandle surface, uint64_t timeout);
 
-bool DLLEXPORT present_render_target_to_surface(SurfaceHandle surface,
-                                                const RenderTargetHandle render_target);
+bool __declspec(dllexport)
+        present_image_to_surface(SurfaceHandle surface, SwapchainImageHandle image);
 
-void DLLEXPORT render_test_image(const InstanceHandle instance,
-                                 RenderTargetHandle render_target);
+bool __declspec(dllexport) try_recreate_swapchain(SurfaceHandle surface);
 
-TestVertexBufferHandle DLLEXPORT
-create_test_vertex_buffers(const SurfaceHandle surface);
+ImageHandle __declspec(dllexport)
+        create_image(const InstanceHandle instance, uint32_t width, uint32_t height,
+                     const void* pixels, uint32_t size);
 
-bool DLLEXPORT update_vertex_buffers(TestVertexBufferHandle vertex_buffers,
-                                     const void* data, size_t vertex_count,
-                                     size_t vertex_size, uint64_t timeout);
+void __declspec(dllexport) destroy_image(ImageHandle image);
 
-void DLLEXPORT destroy_test_vertex_buffers(TestVertexBufferHandle vertex_buffers);
+void __declspec(dllexport)
+        set_image_layout(ImageBaseHandle image, VkImageLayout layout);
 
-TestUniformBuffersHandle DLLEXPORT
-create_test_uniform_buffers(const SurfaceHandle surface);
+CheckerboardPipelineHandle __declspec(dllexport)
+        create_checkerboard_pipeline(const InstanceHandle instance);
 
-void DLLEXPORT destroy_test_uniform_buffers(TestUniformBuffersHandle uniform_buffers);
+void __declspec(dllexport)
+        destroy_checkerboard_pipeline(CheckerboardPipelineHandle pipeline);
 
-void DLLEXPORT render_test_image_with_buffers(
-        const InstanceHandle instance, RenderTargetHandle render_target,
-        const TestUniformBuffersHandle uniform_buffers,
-        const TestVertexBufferHandle vertex_buffers, float angle);
+PalettePipelineHandle __declspec(dllexport)
+        create_palette_pipeline(const InstanceHandle instance);
+
+void __declspec(dllexport) destroy_palette_pipeline(PalettePipelineHandle pipeline);
+
+bool __declspec(dllexport)
+        wait_framebuffer_idle(const FramebufferBaseHandle framebuffer,
+                              uint64_t timeout);
+
+void __declspec(dllexport) set_framebuffer_dependency(FramebufferBaseHandle owner,
+                                                      FramebufferBaseHandle dependency);
+
+bool __declspec(dllexport)
+        framebuffer_has_dependency(const FramebufferBaseHandle framebuffer);
+
+void __declspec(dllexport) render_framebuffer(const FramebufferBaseHandle framebuffer,
+                                              uint32_t instance_count);
+
+CheckerboardFramebufferHandle __declspec(dllexport)
+        create_checkerboard_framebuffer(const CheckerboardPipelineHandle pipeline,
+                                        ImageBaseHandle image,
+                                        VkImageLayout final_layout);
+
+void __declspec(dllexport)
+        destroy_checkerboard_framebuffer(CheckerboardFramebufferHandle framebuffer);
+
+void __declspec(dllexport)
+        update_checkerboard_pattern(CheckerboardFramebufferHandle framebuffer,
+                                    float width, float height, float a1, float r1,
+                                    float g1, float b1, float a2, float r2, float g2,
+                                    float b2);
+
+PaletteFramebufferHandle __declspec(dllexport)
+        create_palette_framebuffer(const PalettePipelineHandle pipeline,
+                                   ImageBaseHandle image, VkImageLayout final_layout);
+
+void __declspec(dllexport)
+        destroy_palette_framebuffer(PaletteFramebufferHandle framebuffer);
+
+void __declspec(dllexport)
+        update_palette_color_data(const PaletteFramebufferHandle framebuffer,
+                                  const uint16_t* color_data, uint32_t size);
+
+void __declspec(dllexport)
+        update_palette_view(const PaletteFramebufferHandle framebuffer, uint32_t width,
+                            uint32_t height);
+
+FramebufferBaseHandle __declspec(dllexport) get_surface_framebuffer_from_index(
+        SurfaceFramebuffersHandle surface_framebuffers, uint32_t index);
+
+FramebufferBaseHandle __declspec(dllexport) get_surface_framebuffer_from_image(
+        SurfaceFramebuffersHandle surface_framebuffers, SwapchainImageHandle image);
+
+uint32_t __declspec(dllexport) get_surface_framebuffers_size(
+        const SurfaceFramebuffersHandle surface_framebuffers);
+
+CheckerboardSurfaceFramebuffersHandle __declspec(dllexport)
+        create_checkerboard_surface_framebuffers(
+                const CheckerboardPipelineHandle pipeline, SurfaceHandle surface,
+                VkImageLayout final_layout);
+
+void __declspec(dllexport) destroy_checkerboard_surface_framebuffers(
+        CheckerboardSurfaceFramebuffersHandle surface_framebuffers);
+
+PaletteSurfaceFramebuffersHandle __declspec(dllexport)
+        create_palette_surface_framebuffers(const PalettePipelineHandle pipeline,
+                                            SurfaceHandle surface,
+                                            VkImageLayout final_layout);
+
+void __declspec(dllexport) destroy_palette_surface_framebuffers(
+        PaletteSurfaceFramebuffersHandle surface_framebuffers);
 }  // extern "C"
